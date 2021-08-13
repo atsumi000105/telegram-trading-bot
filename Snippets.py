@@ -1,13 +1,9 @@
-'''
-df["Column_name"] - shoes all values for specific column
-df.loc[0:2, 'Hobbyist':'Employment'] - display 3 rows for those columns
 
-df['Close_dif'] = df['Close'].diff() - calcualte difference between rows in column
-df['Diff_%'] = df['Open'].pct_change() - same but in %
+# save the df to h5
+import pandas_datareader.data as web
+import h5py
 
-df["Diff_%"].max() - getting min/max from column
-
-
-df.set_index("Some_existing_column") - make column as index column
-'''
-
+df = web.DataReader(name='SP500', data_source='fred', start=2009).squeeze()
+print(df.info())
+hf = h5py.File('SP500.h5', 'w')
+hf.create_dataset('dataset', data=df)

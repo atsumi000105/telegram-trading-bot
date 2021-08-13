@@ -1,79 +1,76 @@
-# Install the dependencies
-import pandas as pd
-import yfinance as yf
-from datetime import datetime, timedelta
+from Algorithms import Double_avarage
+import Get_data
 import matplotlib.pyplot as plt
-from TimeSeries_models import model_selection
-
-plt.style.use('bmh')
-
-'''
-period: data period to download (either use period parameter or use start and end) Valid periods are:
-“1d”, “5d”, “1mo”, “3mo”, “6mo”, “1y”, “2y”, “5y”, “10y”, “ytd”, “max”
-interval: data interval (1m data is only for available for last 7 days, and data interval <1d for the last 60 days) Valid intervals are:
-“1m”, “2m”, “5m”, “15m”, “30m”, “60m”, “90m”, “1h”, “1d”, “5d”, “1wk”, “1mo”, “3mo”
-
-df = yf.download('ETH-USD','2021-06-01', '2021-06-06', interval="1m")
-'''
+import time
+from Telegram import Bot
+from datetime import date
 
 
-# Get data from Yahoo. if data_prep = True, then keep column with Dates and Close price. Add column with price changes
-def get_data(currency, date_from, date_to, interval, data_prep=False):
-    df = yf.download(currency, date_from, date_to, interval=interval)
-    df.reset_index(inplace=True)
-    df = df.set_index("Datetime")
-    if data_prep:
-        if "d" in interval:
-            df = df[["Close"]]
-        else:
-            df = df[["Close"]]
-    return df
+# prints formatted price
+def formatPrice(n):
+    return ("-$" if n < 0 else "$") + "{0:.2f}".format(abs(n))
 
 
-currency = 'ETH-USD'
+def calculate_balance(data_signal):
+    balance = 100
+    print("Изначальный бюджет", balance, "$")
+    price = 0
+    for i in range(len(data_signal)):
+        if data_signal.positions.iloc[i] == 1:
+            price = float(data_signal.Close.iloc[i])
+        elif data_signal.positions.iloc[i] == -1 and price != 0:
+            balance = balance * float(data_signal.Close.iloc[i]) / price
+            balance = balance * (1 - commision)
+        # print(balance)
+    return balance
 
-date_from = datetime.today() - timedelta(days=5)
-date_to = datetime.today()  # - timedelta(days=3)
 
-# interval: data interval (1m data is only for available for last 7 days, and data interval <1d for the last 60 days)
-# Valid intervals are: “1m”, “2m”, “5m”, “15m”, “30m”, “60m”, “90m”, “1h”, “1d”, “5d”, “1wk”, “1mo”, “3mo”
-interval = "5m"
-df_5m = get_data(currency, date_from, date_to, interval, True)
-df_real = get_data(currency, date_from, date_to, interval, True)
-#df_real.to_csv(r'C:\Users\Vlad\Desktop\ML_price_pred\data.csv')
-# Nr of point we will predict
-pred_point = 5
+today = date.today()
+today = today.strftime("%Y-%m-%d")
+# тут можешь изменять данные
+start_date = '2021-08-01'  # начало периода
+end_date = today  # конец периода
+# tickers = "XLMBNB"  # название валюты ADABNB
+ticker = [ 'XLMUSDT', 'BNBUSDT', 'ADAUSDT']
+short_window = 85
+long_window = 45
+# short_window = 5
+# long_window = 135
+commision = 0.0001
 
-# Supported models : DecisionTree, RandomForest, XGBboost
-models = ["DecisionTree", "RandomForest", "XGBboost"]
-for model in models:
-    ml_class = model_selection(model=model, points=pred_point, data=df_5m)
-    X = ml_class.get_featuredata()
-    prediction = ml_class.run_model()
-    # Visualize results
+Bot.send_msg('Новые параметры стратегии Double MA: ' + str(short_window) + '/' + str(long_window))
+while True:
+    for tickers in ticker:
+        data_signal = Get_data.binance_data(tickers, start_date)
+        signals = Double_avarage.double_moving_average(data_signal, short_window, long_window)
+        data_signal['positions'] = signals['positions']
+        print(tickers, int(data_signal.positions.iloc[-1]))
+        if int(data_signal.positions.iloc[-1]) == 1:
+            Bot.send_msg('Покупай ' + str(tickers) + " цена: " + str(data_signal.Close.iloc[-1]))
+        elif int(data_signal.positions.iloc[-1]) == -1:
+            Bot.send_msg('Наверное лучше продать сейчас ' + str(tickers) + " цена: " + str(data_signal.Close.iloc[-1]))
+    time.sleep(895)
 
-    valid = df_5m[X.shape[0]:]
+# fig = plt.figure()
+# fig.set_size_inches(22.5, 10.5)
+# plt.axhline(y=100, color='r', linestyle='-')
+# plt.plot(np.squeeze(balance_arr))
+# plt.show()
 
-    prediction_real = ml_class.predict(df_real)
-    prediction_real = prediction_real[-pred_point:]
+fig = plt.figure()
+fig.set_size_inches(22.5, 10.5)
+ax1 = fig.add_subplot(111, ylabel='Google price in $')
+data_signal["Close"].plot(ax=ax1, color='g', lw=.5)
+ts["short_mavg"].plot(ax=ax1, color='r', lw=2.)
+ts["long_mavg"].plot(ax=ax1, color='b', lw=2.)
 
-    # Assigne future time to predicted values. (time = index)
-    df = pd.DataFrame({'index': valid.index + pd.Timedelta(pred_point * pred_point, unit='minutes'),
-                       "values": prediction_real})
+ax1.plot(ts.loc[ts.orders == 1.0].index, data_signal["Close"][ts.orders == 1.0],
+         '^', markersize=7, color='k')
 
-    df = df.set_index('index')
+ax1.plot(ts.loc[ts.orders == -1.0].index, data_signal["Close"][ts.orders == -1.0],
+         'v', markersize=7, color='k')
 
-    prediction_real = df
-    plt.figure(figsize=(16, 8))
-    plt.title(model)
-    plt.xlabel("Points(5 min)")
-    plt.ylabel('Close Price USD')
-    plt.plot(df_real["Close"][-24:])
-    plt.plot(prediction_real)
-    plt.legend(['Оригинал', 'Предсказание'])
-    plt.show()
-    print()
-    print(prediction_real)
-print(df_5m.tail(10))
-print()
+plt.legend(["Price", "Short mavg", "Long mavg", "Buy", "Sell"])
+plt.title("Double Moving Average Trading Strategy 105/65 " + tickers)
 
+plt.show()
