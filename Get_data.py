@@ -6,8 +6,8 @@ import pandas as pd
 # apikey = 'e1FmlgmhGU2qbaBIMy3TifENlG4esqfBPkfVp6LOxABbMCzkLxjrszY5pKOhxiUj'
 # secret = 'i8nAXkmxhMbAkAlsCeX8oF8rSIr3f2B9eyWBT2EuECS3zw8vc4BDiYXaV7WB7X81'
 # TEST
-apikey = 'e1FmlgmhGU2qbaBIMy3TifENlG4esqfBPkfVp6LOxABbMCzkLxjrszY5pKOhxiUj'
-secret = 'i8nAXkmxhMbAkAlsCeX8oF8rSIr3f2B9eyWBT2EuECS3zw8vc4BDiYXaV7WB7X81'
+apikey =
+secret =
 
 client = Client(apikey, secret)
 
