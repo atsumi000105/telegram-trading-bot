@@ -3,8 +3,7 @@ from binance.client import Client
 import pandas as pd
 
 # Prod
-# apikey = 'e1FmlgmhGU2qbaBIMy3TifENlG4esqfBPkfVp6LOxABbMCzkLxjrszY5pKOhxiUj'
-# secret = 'i8nAXkmxhMbAkAlsCeX8oF8rSIr3f2B9eyWBT2EuECS3zw8vc4BDiYXaV7WB7X81'
+
 # TEST
 apikey =
 secret =
