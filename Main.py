@@ -4,41 +4,36 @@ import matplotlib.pyplot as plt
 import time
 from Telegram import Bot
 from datetime import date
+import Snippets
 
 
-# prints formatted price
-def formatPrice(n):
-    return ("-$" if n < 0 else "$") + "{0:.2f}".format(abs(n))
 
 
-def calculate_balance(data_signal):
-    balance = 100
-    print("Изначальный бюджет", balance, "$")
-    price = 0
-    for i in range(len(data_signal)):
-        if data_signal.positions.iloc[i] == 1:
-            price = float(data_signal.Close.iloc[i])
-        elif data_signal.positions.iloc[i] == -1 and price != 0:
-            balance = balance * float(data_signal.Close.iloc[i]) / price
-            balance = balance * (1 - commision)
-        # print(balance)
-    return balance
+def check_performance(tickers, start_date):
+    data_signal = Get_data.binance_data(tickers, start_date)
+    signals = Double_avarage.double_moving_average(data_signal, 85, 45)
+    print(Snippets.calculate_balance(signals))
 
 
 today = date.today()
+
 today = today.strftime("%Y-%m-%d")
 # тут можешь изменять данные
 start_date = '2021-08-01'  # начало периода
 end_date = today  # конец периода
 # tickers = "XLMBNB"  # название валюты ADABNB
-ticker = [ 'XLMUSDT', 'BNBUSDT', 'ADAUSDT']
+ticker = ['XLMUSDT', 'BNBUSDT', 'ADAUSDT', "XLMBNB", "ADABNB"]
 short_window = 85
 long_window = 45
 # short_window = 5
 # long_window = 135
-commision = 0.0001
 
-Bot.send_msg('Новые параметры стратегии Double MA: ' + str(short_window) + '/' + str(long_window))
+
+for tickers in ticker:
+    check_performance(tickers, start_date)
+
+# Bot.send_msg('Новые параметры стратегии Double MA: ' + str(short_window) + '/' + str(long_window))
+# Bot.send_msg('Валюта: ' + str(short_window) + '/' + str(long_window) + ". BNB пары не брались в расчет.")
 while True:
     for tickers in ticker:
         data_signal = Get_data.binance_data(tickers, start_date)
