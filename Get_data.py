@@ -18,16 +18,16 @@ client = Client(apikey, secret)
 today = date.today()
 today = today.strftime("%Y-%m-%d")
 
-def binance_data(ticker, date_from, end_date=today):
+def binance_data(ticker, date_from):
     # https://python-binance.readthedocs.io/en/latest/binance.html#binance.client.BaseClient.KLINE_INTERVAL_15MINUTE
-    historical = client.get_historical_klines(ticker, Client.KLINE_INTERVAL_4HOUR, date_from, end_date)
+    historical = client.get_historical_klines(ticker, Client.KLINE_INTERVAL_15MINUTE, date_from)
 
     hist_df = pd.DataFrame(historical)
 
     hist_df.columns = ['Open Time', 'Open', 'High', 'Low', 'Close', 'Volume', 'Close Time', 'Quote Asset Volume',
                        'Number of Trades', 'TB Base Volume', 'TB Quote Volume', 'Ignore']
 
-    hist_df.drop(['Open Time', 'Open', 'High', 'Low', 'Volume', 'Quote Asset Volume',
+    hist_df.drop(['Open Time', 'Quote Asset Volume',
                   'Number of Trades', 'TB Base Volume', 'TB Quote Volume', 'Ignore'], axis=1, inplace=True)
 
     hist_df['Close Time'] = pd.to_datetime(hist_df['Close Time'] / 1000, unit='s')
@@ -35,7 +35,7 @@ def binance_data(ticker, date_from, end_date=today):
     numeric_columns = ['Close']
 
     hist_df[numeric_columns] = hist_df[numeric_columns].apply(pd.to_numeric, axis=1)
-    print("Data loaded", ticker, date_from, end_date)
+    print("Data loaded", ticker, date_from)
     return hist_df
 
 

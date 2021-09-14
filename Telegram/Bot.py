@@ -15,6 +15,8 @@ token = os.getenv('TELEGRAM_TOKEN')
 
 bot = telebot.TeleBot(token)
 
+def send_msg(text):
+    bot.send_message(376012018, text)
 
 
 @bot.message_handler(commands=['start'])
@@ -23,7 +25,7 @@ def start(message):
     item1 = telebot.types.KeyboardButton("Алгоритмы")
     markup.add(item1)
 
-    bot.send_message(message.chat.id, "{0.first_name}, шо надо ?".format(message.from_user), reply_markup=markup)
+    bot.send_message(message.chat.id, str(message.chat.id) + "{0.first_name}, шо надо ?".format(message.from_user), reply_markup=markup)
 
 
 @bot.message_handler(content_types=['text'])

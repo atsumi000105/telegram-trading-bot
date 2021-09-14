@@ -1,31 +1,21 @@
 # Load libraries
 import Snippets
-
+import Indicators
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
-from pandas import read_csv, set_option
-from pandas.plotting import scatter_matrix
-import seaborn as sns
-from sklearn.preprocessing import StandardScaler
-from sklearn.model_selection import train_test_split, KFold, cross_val_score, GridSearchCV
+from sklearn.model_selection import train_test_split, KFold, cross_val_score
 from sklearn.linear_model import LogisticRegression
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
 from sklearn.naive_bayes import GaussianNB
-from sklearn.svm import SVC
 from sklearn.neural_network import MLPClassifier
-from sklearn.pipeline import Pipeline
-from sklearn.ensemble import AdaBoostClassifier, GradientBoostingClassifier, RandomForestClassifier, ExtraTreesClassifier
+from sklearn.ensemble import AdaBoostClassifier, GradientBoostingClassifier, RandomForestClassifier
 from sklearn.metrics import classification_report, confusion_matrix, accuracy_score
 
+
 #Libraries for Deep Learning Models
-from keras.models import Sequential
-from keras.layers import Dense
-from keras.wrappers.scikit_learn import KerasClassifier
-from tensorflow.keras.optimizers import SGD
-from datetime import datetime, timedelta
 
 
 # load dataset
@@ -42,15 +32,6 @@ dataset['positions'] = np.where(dataset['short_mavg'] > dataset['long_mavg'], 0.
 dataset.drop(['short_mavg', 'long_mavg', 'Close Time.1'], axis=1, inplace=True)
 
 def add_indicators(dataset):
-
-    #calculation of exponential moving average
-    def EMA(df, n):
-        EMA = pd.Series(df['Close'].ewm(span=n, min_periods=n).mean(), name='EMA_' + str(n))
-        return EMA
-    dataset['EMA10'] = EMA(dataset, 10)
-    dataset['EMA30'] = EMA(dataset, 30)
-    dataset['EMA200'] = EMA(dataset, 200)
-
 
     #calculation of rate of change
     def ROC(df, n):
@@ -70,22 +51,9 @@ def add_indicators(dataset):
     dataset['MOM30'] = MOM(dataset['Close'], 30)
 
     #calculation of relative strength index
-    def RSI(series, period):
-        delta = series.diff().dropna()
-        u = delta * 0
-        d = u.copy()
-        u[delta > 0] = delta[delta > 0]
-        d[delta < 0] = -delta[delta < 0]
-        u[u.index[period-1]] = np.mean( u[:period] ) #first value is sum of avg gains
-        u = u.drop(u.index[:(period-1)])
-        d[d.index[period-1]] = np.mean( d[:period] ) #first value is sum of avg losses
-        d = d.drop(d.index[:(period-1)])
-        rs = u.ewm(com=period-1, adjust=False).mean() / \
-        d.ewm(com=period-1, adjust=False).mean()
-        return 100 - 100 / (1 + rs)
-    dataset['RSI10'] = RSI(dataset['Close'], 10)
-    dataset['RSI30'] = RSI(dataset['Close'], 30)
-    dataset['RSI200'] = RSI(dataset['Close'], 200)
+    dataset['RSI10'] = Indicators.RSI(dataset['Close'], 10)
+    dataset['RSI30'] = Indicators.RSI(dataset['Close'], 30)
+    dataset['RSI200'] = Indicators.RSI(dataset['Close'], 200)
 
     #calculation of stochastic osillator.
 
@@ -105,15 +73,20 @@ def add_indicators(dataset):
         # dataset['%K200'] = STOK(dataset['Close'], dataset['Low'], dataset['High'], 200)
         # dataset['%D200'] = STOD(dataset['Close'], dataset['Low'], dataset['High'], 200)
 
-        #Calculation of moving average
-    def MA(df, n):
-        MA = pd.Series(df['Close'].rolling(n, min_periods=n).mean(), name='MA_' + str(n))
-        return MA
-    dataset['MA10'] = MA(dataset, 2)
-    dataset['MA30'] = MA(dataset, 7)
-    dataset['MA200'] = MA(dataset, 25)
-    dataset['MA400'] = MA(dataset, 55)
-    dataset['MA600'] = MA(dataset, 90)
+    #Calculation of moving average
+
+    dataset['SMA10'] = Indicators.SMA(dataset['Close'], 10)
+    dataset['SMA30'] = Indicators.SMA(dataset['Close'], 20)
+    dataset['SMA55'] = Indicators.SMA(dataset['Close'], 55)
+    dataset['SMA90'] = Indicators.SMA(dataset['Close'], 90)
+    dataset['SMA155'] = Indicators.SMA(dataset['Close'], 155)
+
+    # calculation of exponential moving average
+    #dataset['EMA30'] = Indicators.EMA(dataset['Close'], 20)
+    dataset['EMA100'] = Indicators.EMA(dataset['Close'], 100)
+    dataset['EMA200'] = Indicators.EMA(dataset['Close'], 200)
+    dataset['EMA400'] = Indicators.EMA(dataset['Close'], 400)
+    dataset['EMA600'] = Indicators.EMA(dataset['Close'], 600)
 
     return dataset
 
@@ -132,6 +105,7 @@ Y = dataset["positions"]
 X = dataset.loc[:, dataset.columns != 'positions']
 validation_size = 0.3
 seed = 1
+
 X_train, X_validation, Y_train, Y_validation = train_test_split(X, Y, test_size=validation_size, random_state=1)
 
 def test_models():
@@ -180,6 +154,7 @@ def test_models():
     plt.show()
 
 #test_models()
+
 model = LogisticRegression(n_jobs=-1)
 model.fit(X_train, Y_train)
 
