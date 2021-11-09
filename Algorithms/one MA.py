@@ -9,22 +9,15 @@ import Get_data
 
 warnings.filterwarnings('ignore')
 
-def double_moving_average(financial_data, short_window, long_window):
+def double_moving_average(financial_data, short_window):
     signals = pd.DataFrame(index=financial_data.index)
     signals['signal'] = 0.0
 
     signals['short_mavg'] = Indicators.SMA(np.array(financial_data['Close']), short_window)
-    signals['long_mavg'] = Indicators.SMA(financial_data['Close'], long_window)
 
-
-    if short_window >= long_window:
-        signals['signal'][long_window:] = \
-            np.where(signals['short_mavg'][long_window:]
-                     > signals['long_mavg'][long_window:], 1.0, 0.0)
-    else:
-        signals['signal'][short_window:] = \
-            np.where(signals['short_mavg'][short_window:]
-                     > signals['long_mavg'][short_window:], 1.0, 0.0)
+    signals['signal'][short_window:] = \
+        np.where(signals['short_mavg'][short_window:]
+                 > financial_data['Close'][short_window:], 1.0, 0.0)
 
     signals['positions'] = signals['signal'].diff()
     signals['Close'] = financial_data['Close']
@@ -36,48 +29,30 @@ def check_all_variants(data_signal):
     balance_ar = []
     sw_ar = []
     lw_ar = []
-    for sw in range(5, 100, 3):
-        for lw in range(5, 100, 3):
-            if sw == lw: continue
-            if len(data_signal) < sw or len(data_signal) < lw: continue
-            ts = double_moving_average(data_signal, sw, lw)
-            data_signal["positions"] = ts['positions']
-            balance = Snippets.calculate_balance(data_signal)
-            if balance - 100 > 0:
-                balance_ar.append(balance - 100)
-                sw_ar.append(sw)
-                lw_ar.append(lw)
-            # except:
-            #     continue
-    data = {'Balance': balance_ar, 'short': sw_ar, 'long': lw_ar}
+    for sw in range(5, 200, 5):
+
+        if len(data_signal) < sw : continue
+        ts = double_moving_average(data_signal, sw)
+        data_signal["positions"] = ts['positions']
+        balance = Snippets.calculate_balance(data_signal)
+        if balance - 100 > 0:
+            balance_ar.append(balance - 100)
+            sw_ar.append(sw)
+
+        # except:
+        #     continue
+    data = {'Balance': balance_ar, 'short': sw_ar}
     df = pd.DataFrame(data)
     # df.to_csv("C:\\Users\\Vlad\Desktop\\Finance\\" + ticker + ".csv")
     return df
 
 
-def get_lw_sw(start_point, end_point, ada, bnb):
-    ada = ada.iloc[start_point:end_point, :]
-    ada_var = check_all_variants(ada)
 
-    ada_var['Key'] = ada_var['short'].astype(str) + ada_var['long'].astype(str)
-
-    bnb = bnb.iloc[start_point:end_point, :]
-    bnb_var = check_all_variants(bnb)
-
-    bnb_var['Key'] = bnb_var['short'].astype(str) + bnb_var['long'].astype(str)
-
-    data = pd.merge(ada_var, bnb_var, on='Key')
-    data["Sum_Bal"] = data['Balance_x'] + data['Balance_y']  # + data['Balance']
-    if len(data) > 0:
-        sw = data.sort_values("Sum_Bal").iloc[-1, 1]
-        lw = data.sort_values("Sum_Bal").iloc[-1, 2]
-        return sw, lw
-    return 0, 0
 
 def get_results(sw, lw, start_poimt, end_point, ada, bnb):
     ada = ada.iloc[start_poimt:end_point, :]
 
-    data_signal = double_moving_average(ada, sw, lw)
+    data_signal = double_moving_average(ada, sw)
 
     startdate_arr.append(ada['Close Time'].iloc[0])
 
@@ -90,7 +65,7 @@ def get_results(sw, lw, start_poimt, end_point, ada, bnb):
 
     bnb = bnb.iloc[start_poimt:end_point, :]
 
-    data_signal = double_moving_average(bnb, sw, lw)
+    data_signal = double_moving_average(bnb, sw)
 
     startdate_arr.append(bnb['Close Time'].iloc[0])
     close_arr.append(bnb['Close'].iloc[0])

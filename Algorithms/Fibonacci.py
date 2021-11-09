@@ -4,10 +4,10 @@ import Get_data
 import Snippets
 # start_date = '2021-08-16'
 # end_date = '2021-08-20'
-ticker = ['BNBUSDT', 'ADAUSDT']
 
 
-#data_signal = Get_data.binance_data('ADAUSDT', start_date, )
+
+
 def main(data_signal):
     price = data_signal["Close"]
 
@@ -31,13 +31,13 @@ def main(data_signal):
 
     # Calulating the MACD Line and the Signal Line indicator
     # Calculate tthe Short Term Exponential Moving Average
-    ShortEMA = data_signal.Close.ewm(span=12, adjust=False).mean()
+    ShortEMA = data_signal.Close.ewm(span=10, adjust=False).mean()
     # Calculate the Long Term Eponenatial
-    LongEMA = data_signal.Close.ewm(span=28, adjust=False).mean()
+    LongEMA = data_signal.Close.ewm(span=20, adjust=False).mean()
     # Calculate the MACD
     MACD = ShortEMA - LongEMA
     # calculate the Signal line
-    signal = MACD.ewm(span=10, adjust=False).mean()
+    signal = MACD.ewm(span=5, adjust=False).mean()
 
     # Create new columns for the df
     data_signal['MACD'] = MACD
@@ -142,3 +142,5 @@ def main(data_signal):
 #   print(Snippets.calculate_balance(data_signal))
     return Snippets.calculate_balance(data_signal)
 
+data_signal = Get_data.binance_data('ETHUSDT', '08.09.2021', '21.09.2021')
+print(str(float(main(data_signal))-100))

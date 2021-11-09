@@ -1,80 +1,65 @@
-# Install the dependencies
-import pandas as pd
-import yfinance as yf
-from datetime import datetime, timedelta
-import matplotlib.pyplot as plt
-from Old.TimeSeries_models import model_selection
-
-plt.style.use('bmh')
-
-'''
-period: data period to download (either use period parameter or use start and end) Valid periods are:
-“1d”, “5d”, “1mo”, “3mo”, “6mo”, “1y”, “2y”, “5y”, “10y”, “ytd”, “max”
-interval: data interval (1m data is only for available for last 7 days, and data interval <1d for the last 60 days) Valid intervals are:
-“1m”, “2m”, “5m”, “15m”, “30m”, “60m”, “90m”, “1h”, “1d”, “5d”, “1wk”, “1mo”, “3mo”
-
-df = yf.download('ETH-USD','2021-06-01', '2021-06-06', interval="1m")
-'''
+def objective(trial):
 
 
-# Get data from Yahoo. if data_prep = True, then keep column with Dates and Close price. Add column with price changes
-def get_data(currency, date_from, date_to, interval, data_prep=False):
-    df = yf.download(currency, date_from, date_to, interval=interval)
-    df.reset_index(inplace=True)
-    df = df.set_index("Datetime")
-    if data_prep:
-        if "d" in interval:
-            df = df[["Close"]]
-        else:
-            df = df[["Close"]]
-    return df
+    tfidf__analyzer = trial.suggest_categorical('tfidf__analyzer', ['word', 'char', 'char_wb'])
+    tfidf__lowercase = trial.suggest_categorical('tfidf__lowercase', [False, True])
+    tfidf__max_features = trial.suggest_int('tfidf__max_features', 500, 10_000)
+    lgbc__num_leaves = trial.suggest_int('lgbc__num_leaves', 2, 150)
+    lgbc__max_depth = trial.suggest_int('lgbc__max_depth', 2, 100)
+    lgbc__n_estimators = trial.suggest_int('lgbc__n_estimators', 10, 200)
+    lgbc__subsample_for_bin = trial.suggest_int('lgbc__subsample_for_bin', 2000, 300_000)
+    lgbc__min_child_samples = trial.suggest_int('lgbc__min_child_samples', 20, 500)
+    lgbc__reg_alpha = trial.suggest_uniform('lgbc__reg_alpha', 0.0, 1.0)
+    lgbc__colsample_bytree = trial.suggest_uniform('lgbc__colsample_bytree', 0.6, 1.0)
+    lgbc__learning_rate = trial.suggest_loguniform('lgbc__learning_rate', 1e-5, 1e-0)
+
+    params = {
+        'tfidf__analyzer': tfidf__analyzer,
+        'tfidf__lowercase': tfidf__lowercase,
+        'tfidf__max_features': tfidf__max_features,
+        'lgbc__num_leaves': lgbc__num_leaves,
+        'lgbc__max_depth': lgbc__max_depth,
+        'lgbc__n_estimators': lgbc__n_estimators,
+        'lgbc__subsample_for_bin': lgbc__subsample_for_bin,
+        'lgbc__min_child_samples': lgbc__min_child_samples,
+        'lgbc__reg_alpha': lgbc__reg_alpha,
+        'lgbc__colsample_bytree': lgbc__colsample_bytree,
+        'lgbc__learning_rate': lgbc__learning_rate
+    }
+
+    model.set_params(**params)
+
+    return - np.mean(cross_val_score(model, X, y, cv=8))
 
 
-currency = 'ETH-USD'
+study = optuna.create_study()
+study.optimize(objective, timeout=600)
 
-date_from = datetime.today() - timedelta(days=7)
-date_to = datetime.today()  # - timedelta(days=3)
-
-# interval: data interval (1m data is only for available for last 7 days, and data interval <1d for the last 60 days)
-# Valid intervals are: “1m”, “2m”, “5m”, “15m”, “30m”, “60m”, “90m”, “1h”, “1d”, “5d”, “1wk”, “1mo”, “3mo”
-interval = "1m"
-df_5m = get_data(currency, date_from, date_to, interval, True)
-df_real = get_data(currency, date_from, date_to, interval, True)
-df_real.to_csv(r'C:\Users\Vlad\Desktop\ML_price_pred\data.csv')
-# Nr of point we will predict
-pred_point = 5
-
-# Supported models : DecisionTree, RandomForest, XGBboost
-models = ["DecisionTree", "RandomForest", "XGBboost"]
-model = "RandomForest"
-
-ml_class = model_selection(model=model, points=pred_point, data=df_5m)
-X = ml_class.get_featuredata()
-prediction = ml_class.run_model()
-# Visualize results
-
-valid = df_5m[X.shape[0]:]
-
-prediction_real = ml_class.predict(df_real)
-prediction_real = prediction_real[-pred_point:]
-
-# Assigne future time to predicted values. (time = index)
-df = pd.DataFrame({'index': valid.index + pd.Timedelta(pred_point * pred_point, unit='minutes'),
-                   "values": prediction_real})
-
-df = df.set_index('index')
-
-prediction_real = df
-plt.figure(figsize=(16, 8))
-plt.title(model)
-plt.xlabel("Points(5 min)")
-plt.ylabel('Close Price USD')
-plt.plot(df_real["Close"][-24:])
-plt.plot(prediction_real)
-plt.legend(['Оригинал', 'Предсказание'])
-plt.show()
-print()
-print(prediction_real)
-print(df_5m.tail(10))
-print()
-
+[I 2019-02-25 17:10:36,508]
+Finished a trial resulted in value: -0.0669992430578283.
+Current best value is -0.0669992430578283 with parameters:
+{'tfidf__analyzer': 'word',
+'tfidf__lowercase': True,
+'tfidf__max_features': 7346,
+'lgbc__num_leaves': 88,
+'lgbc__max_depth': 77,
+'lgbc__n_estimators': 20,
+'lgbc__subsample_for_bin': 137472,
+'lgbc__min_child_samples': 464,
+'lgbc__reg_alpha': 0.9216346635999628,
+'lgbc__colsample_bytree': 0.9932423286475682,
+'lgbc__learning_rate': 0.025721930853054423}.
+[I 2019-02-25 17:10:38,567]
+Finished a trial resulted in value: -0.0669992430578283.
+Current best value is -0.0669992430578283 with parameters:
+{'tfidf__analyzer': 'word',
+'tfidf__lowercase': True,
+'tfidf__max_features': 7346,
+'lgbc__num_leaves': 88,
+'lgbc__max_depth': 77,
+'lgbc__n_estimators': 20,
+'lgbc__subsample_for_bin': 137472,
+'lgbc__min_child_samples': 464,
+'lgbc__reg_alpha': 0.9216346635999628,
+'lgbc__colsample_bytree': 0.9932423286475682,
+'lgbc__learning_rate': 0.025721930853054423}.

@@ -49,7 +49,7 @@ def BolBands(price_data=None, time_period=20, stdev_factor=2):
 
 
 # Relative strength indicator
-def RSI(price_data, time_period = 20):
+def RSI(price_data, time_period = 10):
     @nb.jit(fastmath=True, nopython=True)
     def calc_rsi(array, deltas, avg_gain, avg_loss, n):
 

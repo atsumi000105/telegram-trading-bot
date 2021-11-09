@@ -1,71 +1,111 @@
-from Algorithms import Double_avarage
+# Load libraries
+
+import pickle
 import Get_data
-import matplotlib.pyplot as plt
+from datetime import datetime
 import time
-from Telegram import Bot
-from datetime import date, timedelta
-import Snippets
+from ML_finance import CatBoost
+from Binance import Binance
+account = Binance.Binance_acc()
+# Libraries for Deep Learning Models
+from catboost import CatBoostClassifier
+import warnings
+warnings.filterwarnings('ignore')
 
 
-past_interval=96
+
+def prof_loss(sell_price, buy_price):
+    ratio = sell_price / buy_price
+    if ratio > 1:
+        return ' прибыль ' + str(round(ratio * 100 - 100, 2)) + '%'
+    else:
+        return ' убыток ' + str(round(100 - ratio * 100, 2)) + '%'
 
 
+def sell_all():
+
+    with open('C:\\Users\\Vlad\\PycharmProjects\\Time-Series-Analysis\\Live\\positionsLIVE.pickle', 'rb') as handle:
+        curr_dict = pickle.load(handle)
+    print(curr_dict)
+    for currency in curr_dict:
+        if curr_dict[currency]:
+            account.sell(symbol=currency)
+            curr_dict[currency] = 0
+
+    with open('C:\\Users\\Vlad\\PycharmProjects\\Time-Series-Analysis\\Live\\positionsLIVE.pickle', 'wb') as handle:
+        pickle.dump(curr_dict, handle, protocol=pickle.HIGHEST_PROTOCOL)
+
+def ada_AB():
+
+    with open('C:\\Users\\Vlad\\PycharmProjects\\Time-Series-Analysis\\Live\\positionsLIVE.pickle', 'rb') as handle:
+        curr_dict = pickle.load(handle)
+    print(curr_dict)
+
+    # curr_dict = dict()
+    # for f in files:
+    #     curr_dict[f[:len(f) - 8]] = 0
+    # curr_dict['DOT'] = 0
+    # curr_dict['BNB'] = 0
+    # with open('C:\\Users\\Vlad\\PycharmProjects\\Time-Series-Analysis\\Live\\positionsLIVE.pickle', 'wb') as handle:
+    #     pickle.dump(curr_dict, handle, protocol=pickle.HIGHEST_PROTOCOL)
+    while True:
+
+        for currency in curr_dict:
+            if currency in ['LUNA','ATOM','LTC','TRX','MATIC','ALGO','LINK', 'ADA', 'BAT']: continue
+            with open('C:\\Users\\Vlad\\PycharmProjects\\Time-Series-Analysis\\ML_finance\\Models\\' + currency + ".pickle", 'rb') as handle:
+                model = pickle.load(handle)
+            recent_data = Get_data.binance_data(currency + 'USDT', '2021-09-29', print_falg=True)
+            recent_data.drop(['Close Time'], axis=1, inplace=True)
+            signals = CatBoost.pred_real(model, recent_data)
+            close_price = signals.Close.iloc[-1]
+
+            order_limit = 20
 
 
-while True:
-    today = date.today()
-    past_range = today - timedelta(days=1)
-    past_range = past_range.strftime("%Y-%m-%d")
-    ada = Get_data.binance_data("ADAUSDT", past_range)
-    bnb = Get_data.binance_data("BNBUSDT", past_range)
+            # BUY
+            # if int(signals.positions.iloc[-1]) == 1 and \
+            #         curr_dict[currency] == 0 and \
+            #         40 < signals['%D30'][-1] < 90 and \
+            #         -1 < signals['ROC30'][-1] < 4 and \
+            #         0 < signals['ROC10'][-1] < 4 and \
+            #         float(client.get_asset_balance('USDT')['free']) > order_limit:
 
+            # if int(signals.positions.iloc[-1]) == 1 and \
+            #         curr_dict[currency] == 0 and \
+            #         0 < signals['ROC10'][-1] < 4 and \
+            #         account.get_acc_balance() > order_limit:
+            #
+            #     curr_dict[currency] = signals.Close.iloc[-1]
+            #     qty = round(order_limit/close_price, account.get_decimal(currency))
+            #     account.buy(symbol=currency + "USDT", quantity=qty)
 
-    sw, lw = Double_avarage.get_lw_sw(0, 100, ada, bnb)
-    text = str(sw) + " " + str(lw)
-    Bot.send_msg(text)
-    for i in range(0, 96*5):
-        today = date.today()
-        past_range = today - timedelta(days=1)
-        past_range = past_range.strftime("%Y-%m-%d")
-        ada = Get_data.binance_data("ADAUSDT", past_range)
-        bnb = Get_data.binance_data("BNBUSDT", past_range)
+            # SELL
+            if int(signals.positions.iloc[-1]) == -1 and \
+                    curr_dict[currency]:
 
-        signals_ada = Double_avarage.double_moving_average(ada, sw, lw)
-        signals_bnb = Double_avarage.double_moving_average(bnb, sw, lw)
+                try:
+                    account.sell(symbol=currency + "USDT")
+                    curr_dict[currency] = 0
+                except:
+                    print('WASNT ABLE TO SELL', currency)
+                    continue
 
+            with open('C:\\Users\\Vlad\\PycharmProjects\\Time-Series-Analysis\\Live\\positionsLIVE.pickle', 'wb') as handle:
+                pickle.dump(curr_dict, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
-        if int(signals_ada.positions.iloc[-1]) == 1:
-            Bot.send_msg('Покупай ADA цена ' + str(signals_ada.Close.iloc[-1]))
-        elif int(signals_ada.positions.iloc[-1]) == -1:
-            Bot.send_msg("Продаем ADA, цена: " + str(signals_ada.Close.iloc[-1]))
+        print(datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+        while True:
+            if datetime.now().minute in [00]:
+                time.sleep(20)
+                break
+            time.sleep(58)
 
-        if int(signals_bnb.positions.iloc[-1]) == 1:
-            Bot.send_msg('Покупай ADA цена ' + str(signals_bnb.Close.iloc[-1]))
-        elif int(signals_bnb.positions.iloc[-1]) == -1:
-            Bot.send_msg("Продаем ADA, цена: " + str(signals_bnb.Close.iloc[-1]))
+#todo
+# RSI > 40. Otherwise sell everything
 
-        time.sleep(895)
+id = -467554548
 
-# fig = plt.figure()
-# fig.set_size_inches(22.5, 10.5)
-# plt.axhline(y=100, color='r', linestyle='-')
-# plt.plot(np.squeeze(balance_arr))
-# plt.show()
+#ada_AB()
 
-fig = plt.figure()
-fig.set_size_inches(22.5, 10.5)
-ax1 = fig.add_subplot(111, ylabel='Google price in $')
-data_signal["Close"].plot(ax=ax1, color='g', lw=.5)
-ts["short_mavg"].plot(ax=ax1, color='r', lw=2.)
-ts["long_mavg"].plot(ax=ax1, color='b', lw=2.)
+sell_all()
 
-ax1.plot(ts.loc[ts.orders == 1.0].index, data_signal["Close"][ts.orders == 1.0],
-         '^', markersize=7, color='k')
-
-ax1.plot(ts.loc[ts.orders == -1.0].index, data_signal["Close"][ts.orders == -1.0],
-         'v', markersize=7, color='k')
-
-plt.legend(["Price", "Short mavg", "Long mavg", "Buy", "Sell"])
-plt.title("Double Moving Average Trading Strategy 105/65 " + tickers)
-
-plt.show()
