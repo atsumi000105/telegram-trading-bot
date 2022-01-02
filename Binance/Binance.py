@@ -42,17 +42,7 @@ class Binance_acc:
         for acc in assets:
             if acc['asset'] == symbol:
                 qty = float(acc['free'][:self.get_decimal(symbol) + 2])
-                print('this ', qty, self.get_decimal(symbol))
+                #print('this ', symbol, qty, self.get_decimal(symbol))
                 client.order_market_sell(symbol=symbol + "USDT", quantity=qty)
                 print(symbol, " Sold")
 
-    def sell_all(self):
-
-        acc = client.get_account()
-        assets = acc['balances']
-        for acc in assets:
-            if acc['asset'] == symbol:
-                print('stock ', acc['free'])
-                qty = acc['free'][:self.get_decimal(symbol) + 2]
-
-        client.order_market_sell(symbol=symbol + "USDT", quantity=qty)

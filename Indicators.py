@@ -11,9 +11,13 @@ def calc_SMA(price_date, time_period):
 
 def SMA(price_date, time_period):
 
-    return bn.move_mean(price_date, window=time_period, min_count=1)
+    return bn.move_mean(price_date, window=time_period)
 
-
+def ROC(df, n):
+    M = df.diff(n - 1)
+    N = df.shift(n - 1)
+    ROC = pd.Series(((M / N) * 100), name='ROC_' + str(n))
+    return ROC
 # Exponential moving average
 def EMA(price_date, time_period):
     alpha = 2 / (time_period + 1.0)
@@ -88,5 +92,16 @@ def MOM():
 
     mom = close_price - history[0]
     mom_values.append(mom)
+
+
+def STOK(close, low, high, n):
+    STOK = ((close - low.rolling(n).min()) / (high.rolling(n).max() - low.rolling(n).min())) * 100
+    return STOK
+
+
+def STOD(close, low, high, n):
+    STOK = ((close - low.rolling(n).min()) / (high.rolling(n).max() - low.rolling(n).min())) * 100
+    STOD = STOK.rolling(3).mean()
+    return STOD
 
 

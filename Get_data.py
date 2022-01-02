@@ -36,6 +36,7 @@ def binance_data(ticker, date_from, end="", print_falg=True ):
 
     hist_df[numeric_columns] = hist_df[numeric_columns].apply(pd.to_numeric, axis=1)
     if print_falg: print("Data loaded", ticker, date_from)
+
     return hist_df
 
 # tickers = ['TRX','LTC','ATOM','FTM','LUNA']

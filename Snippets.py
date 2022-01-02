@@ -1,3 +1,5 @@
+import Get_data
+
 import pandas as pd
 from binance.client import Client
 import os
@@ -19,7 +21,6 @@ def formatPrice(n):
 def calculate_balance(data, commission=0.001, array=False):
     balance = 100
     comm_buy = 0
-    comm_sell = 0
     #print("Изначальный бюджет", balance, "$")
     price_buy = 0
     price_sell = 0
@@ -51,32 +52,25 @@ def check_decimals(symbol):
             is_dec = True
     return decimal
 
+def append_to_excel(fpath, df):
+    old_df = pd.read_excel(fpath)
+    new_df = pd.concat([old_df, df],ignore_index=True)
+    new_df.to_excel(fpath)
+
 
 def sort_my_stupid_txt_file():
-    D30 = []
+
     Result = []
-    ROC10 = []
-    ROC30 = []
     ticker = []
     Time = []
-    RSI10 = []
-    RSI30 = []
 
     f = open(r"C:\Users\Vlad\PycharmProjects\Time-Series-Analysis\Transactions\transactions.txt", "r")
     for line in f:
         nested_list = line.split(sep=",")
         for attrib in nested_list:
-            if "D30" in attrib:
-                D30.append(attrib)
 
             if "Result" in attrib:
                 Result.append(attrib)
-
-            if "ROC10" in attrib:
-                ROC10.append(attrib)
-
-            if "ROC30" in attrib:
-                ROC30.append(attrib)
 
             if "ticker" in attrib:
                 ticker.append(attrib)
@@ -84,49 +78,27 @@ def sort_my_stupid_txt_file():
             if "Time" in attrib:
                 Time.append(attrib)
 
-            if "RSI10" in attrib:
-                RSI10.append(attrib)
 
-            if "RSI30" in attrib:
-                RSI30.append(attrib)
-
-    data = {"D30": D30,
-            "Result": Result,
-            "ROC10": ROC10,
-            "ROC30": ROC30,
+    data = {"Result": Result,
             "ticker": ticker,
-            "Time": Time,
-            "RSI10": RSI10,
-            "RSI30": RSI30}
+            "Time": Time}
 
     df = pd.DataFrame(data)
     df.to_excel('C:\\Users\\Vlad\\Desktop\\Finance\\history tracker.xlsx')
 
 def sort_my_stupid_txt_file1():
-    D30 = []
     Result = []
-    ROC10 = []
-    ROC30 = []
     ticker = []
     Time = []
-    RSI10 = []
-    RSI30 = []
+
 
     f = open(r"C:\Users\Vlad\PycharmProjects\Time-Series-Analysis\Transactions\transactions1.txt", "r")
     for line in f:
         nested_list = line.split(sep=",")
         for attrib in nested_list:
-            if "D30" in attrib:
-                D30.append(attrib)
 
             if "Result" in attrib:
                 Result.append(attrib)
-
-            if "ROC10" in attrib:
-                ROC10.append(attrib)
-
-            if "ROC30" in attrib:
-                ROC30.append(attrib)
 
             if "ticker" in attrib:
                 ticker.append(attrib)
@@ -134,20 +106,49 @@ def sort_my_stupid_txt_file1():
             if "Time" in attrib:
                 Time.append(attrib)
 
-            if "RSI10" in attrib:
-                RSI10.append(attrib)
-
-            if "RSI30" in attrib:
-                RSI30.append(attrib)
-
-    data = {"D30": D30,
+    data = {
             "Result": Result,
-            "ROC10": ROC10,
-            "ROC30": ROC30,
             "ticker": ticker,
             "Time": Time,
-            "RSI10": RSI10,
-            "RSI30": RSI30}
+            }
 
     df = pd.DataFrame(data)
     df.to_excel('C:\\Users\\Vlad\\Desktop\\Finance\\history tracker1.xlsx')
+
+
+def market_change(path = "", online=False):
+
+    tickers = ['BEAM', 'BNB', 'BTC', 'COTI', 'EOS', 'ETH', 'SOL', 'VET', 'XLM', 'XMR', 'XRP',
+               'ALGO', 'ATOM', 'AVAX', 'DOT', 'FTM', 'LINK', 'LTC', 'LUNA', 'MATIC', 'TRX']
+
+    tf_list = list()
+
+    #24 hors
+    for ticker in tickers:
+        if online:
+            data = Get_data.binance_data(ticker + 'USDT', '2021-12-01', print_falg=False)
+        else:
+            data = pd.read_csv(path + ticker + ' 1hr.csv')
+        if ticker == "BEAM":
+            df = pd.DataFrame(data['Close'].pct_change(periods=24))
+        else:
+            df[ticker]= data['Close'].pct_change(periods=24)
+
+    tf_list.append(df.mean(axis=1))
+
+    # 10 hours
+    for ticker in tickers:
+        if online:
+            data = Get_data.binance_data(ticker + 'USDT', '2021-12-01', print_falg=False)
+        else:
+            data = pd.read_csv(path + ticker + ' 1hr.csv')
+        if ticker == "BEAM":
+            df = pd.DataFrame(data['Close'].pct_change(periods=10))
+        else:
+            df[ticker]= data['Close'].pct_change(periods=10)
+
+    df['market_change_ten'] = df.mean(axis=1)
+    df['market_change_day'] = tf_list[0]
+
+
+    return df[['market_change_day', 'market_change_ten']]

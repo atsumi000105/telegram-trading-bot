@@ -12,61 +12,22 @@ import pandas as pd
 
 
 def clear_records():
-    with open('positions1.pickle', 'rb') as handle:
+    with open('positions.pickle', 'rb') as handle:
         curr_dict = pickle.load(handle)
 
     # trnsact_hist - log file with my transactions history. Comming to txt and then to Power BI
-    with open('transac_hist1.pickle', 'rb') as handle:
+    with open('transac_hist.pickle', 'rb') as handle:
         trnsact_hist = pickle.load(handle)
 
     for currency in curr_dict:
         trnsact_hist[currency] = {}
         curr_dict[currency] = 0
 
-        with open('positions1.pickle', 'wb') as handle:
+        with open('positions.pickle', 'wb') as handle:
             pickle.dump(curr_dict, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
-    with open('transac_hist1.pickle', 'wb') as handle:
+    with open('transac_hist.pickle', 'wb') as handle:
         pickle.dump(trnsact_hist, handle, protocol=pickle.HIGHEST_PROTOCOL)
-
-def sell_all():
-    with open('positions1.pickle', 'rb') as handle:
-        curr_dict = pickle.load(handle)
-
-    # trnsact_hist - log file with my transactions history. Comming to txt and then to Power BI
-    with open('transac_hist1.pickle', 'rb') as handle:
-        trnsact_hist = pickle.load(handle)
-
-    for currency in curr_dict:
-        if curr_dict[currency]:
-            if currency in ['TRX']: continue
-            recent_data = Get_data.binance_data(currency + 'USDT', '2021-12-01', print_falg=False)
-            recent_data.drop(['Close Time'], axis=1, inplace=True)
-            close_price = recent_data.Close.iloc[-2]
-
-
-            Bot.send_msg('Продаем ' + currency + ' , цена: ' + str(close_price) + prof_loss(
-                close_price, curr_dict[currency]), id)
-            print('Продаем ' + currency + ' , цена: ' + str(close_price) + prof_loss(
-                close_price, curr_dict[currency]))
-            # update transaction history
-            trnsact_hist[currency]["Result"] = prof_loss(
-                close_price, curr_dict[currency])
-            # save transactions history
-            with open(r"C:\Users\Vlad\PycharmProjects\Time-Series-Analysis\Transactions\transactions1.txt",
-                      "a") as myfile:
-                myfile.write(str(trnsact_hist[currency]) + '\n')
-
-            curr_dict[currency] = 0
-
-        with open('positions1.pickle', 'wb') as handle:
-            pickle.dump(curr_dict, handle, protocol=pickle.HIGHEST_PROTOCOL)
-
-    with open('transac_hist1.pickle', 'wb') as handle:
-        pickle.dump(trnsact_hist, handle, protocol=pickle.HIGHEST_PROTOCOL)
-    Bot.send_msg("Пауза на 12 часов ", id)
-    time.sleep(60 * 60 * 12)
-
 
 def prof_loss(sell_price, buy_price):
     ratio = sell_price / buy_price
@@ -77,29 +38,22 @@ def prof_loss(sell_price, buy_price):
 
 
 def ada_AB():
-    with open('positions1.pickle', 'rb') as handle:
+    with open('positions.pickle', 'rb') as handle:
         curr_dict = pickle.load(handle)
 
     # trnsact_hist - log file with my transactions history. Comming to txt and then to Power BI
-    with open('transac_hist1.pickle', 'rb') as handle:
+    with open('transac_hist.pickle', 'rb') as handle:
         trnsact_hist = pickle.load(handle)
     print(curr_dict)
 
-
+    #Bot.send_msg("тут без выхода при падении", id)
     while True:
         df_with_changes_data = Snippets.market_change(online=True)
         market_status = df_with_changes_data['market_change_day'][-2]
         print("market ", market_status)
 
-        if market_status < -0.05:
-            msg = "Закрываем лавочку, статус рынка " + str(round(market_status*100, 2)) + " %"
-            Bot.send_msg(msg, id)
-            print("Закрываем лавочку ", round(market_status*100, 2), " %")
-            sell_all()
-            ada_AB()
-        # load files, just to get current active tickers
         for currency in curr_dict:
-            # if currency in ['ATOM']: continue
+            if currency in ['TRX']: continue
             if currency not in trnsact_hist:
                 trnsact_hist[currency] = {}
             # for each ticker load it's model
@@ -112,7 +66,6 @@ def ada_AB():
             recent_data = Get_data.binance_data(currency + 'USDT', '2021-12-01', print_falg=False)
             recent_data.drop(['Close Time'], axis=1, inplace=True)
             recent_data = pd.concat([recent_data, df_with_changes_data], axis=1)
-
             close_price = recent_data.Close.iloc[-2]
 
             signals = CatBoost.pred_test(model, recent_data, columns)
@@ -137,27 +90,31 @@ def ada_AB():
                 trnsact_hist[currency]["Result"] = prof_loss(
                     close_price, curr_dict[currency])
                 # save transactions history
-                with open(r"C:\Users\Vlad\PycharmProjects\Time-Series-Analysis\Transactions\transactions1.txt", "a") as myfile:
+                with open(r"C:\Users\Vlad\PycharmProjects\Time-Series-Analysis\Transactions\transactions.txt", "a") as myfile:
                     myfile.write(str(trnsact_hist[currency]) + '\n')
 
                 curr_dict[currency] = 0
 
-            with open('positions1.pickle', 'wb') as handle:
+            with open('positions.pickle', 'wb') as handle:
                 pickle.dump(curr_dict, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
-        with open('transac_hist1.pickle', 'wb') as handle:
+        with open('transac_hist.pickle', 'wb') as handle:
             pickle.dump(trnsact_hist, handle, protocol=pickle.HIGHEST_PROTOCOL)
+
+        msg = "Рынок в среднем " + str(round(market_status * 100, 2)) + " %"
+        Bot.send_msg(msg, id)
 
         while True:
             if datetime.now().minute in [00]:
                 time.sleep(20)
-                Snippets.sort_my_stupid_txt_file1()
+                Snippets.sort_my_stupid_txt_file()
                 break
             time.sleep(58)
 
 
 
-id = -467554548
+id = -565150126
 
 ada_AB()
 #clear_records()
+
